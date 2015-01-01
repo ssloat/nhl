@@ -76,11 +76,15 @@ class Game(Base):
     id    = Column(Integer, primary_key=True)
     date  = Column(Date)
     title = Column(String)
+    away  = Column(String)
+    home  = Column(String)
 
-    def __init__(self, id, date, title):
+    def __init__(self, id, date, title, away, home):
         self.id    = id
         self.date  = date
         self.title = title
+        self.away  = away
+        self.home  = home
 
     def __repr__(self):
        return "<Game('%d, %s, %s')>" % ((self.id or 0), self.title, self.date)
@@ -91,8 +95,6 @@ class GameLog(Base):
     id        = Column(Integer, primary_key=True)
     player_id = Column(Integer, ForeignKey('players.id'))
     game_id   = Column(Integer, ForeignKey('games.id'))
-
-    gp        = Column(Integer, default=1)
 
     goals     = Column(Integer, default=0)
     assists   = Column(Integer, default=0)

@@ -76,7 +76,8 @@ sub game {
 
     my ($title) = ($html =~ m#<title>(.*)</title>#);
     my @teams = ($title =~ m#(.*) vs. (.*) - Boxscore#);
-    $DBH->do(sprintf "insert into games (id, date, title) values ($gameid, '%s', '$title')", $date->ymd);
+    $DBH->do(sprintf "insert into games (id, date, title, away, home)"
+                . " values ($gameid, '%s', '$title', '$teams[0]', '$teams[1]')", $date->ymd);
 
     my $ppps = power_play($html);
     my ($pstats, $gstats) = ($html =~ /Player Summary(.*)Goaltending Summary(.*)Shots On Goal/);
@@ -116,8 +117,8 @@ sub _goalie_insert {
     $toi = 60*$min + $sec;
 
     my $sql = <<HERE;
-insert into gamelogs (player_id, game_id, wins, saves, ga, mins)
-values ($id, $gameid, $win, $saves, $ga, $toi)
+insert into gamelogs (player_id, game_id, wins, saves, ga, mins, goals, assists, ppp, plusminus, pim, sog, hits, blocks)
+values ($id, $gameid, $win, $saves, $ga, $toi, 0, 0, 0, 0, 0, 0, 0, 0)
 HERE
     $DBH->do($sql);
 }
@@ -132,8 +133,8 @@ sub _skater_insert {
     my $ppp = $ppps->{$name} // 0;
 
     my $sql = <<HERE;
-insert into gamelogs (player_id, game_id, goals, assists, ppp, plusminus, pim, sog, hits, blocks)
-values ($id, $gameid, $g, $a, $ppp, $pm, $pim, $sog, $ht, $bs)
+insert into gamelogs (player_id, game_id, goals, assists, ppp, plusminus, pim, sog, hits, blocks, wins, saves, ga, mins)
+values ($id, $gameid, $g, $a, $ppp, $pm, $pim, $sog, $ht, $bs, 0, 0, 0, 0)
 HERE
     $DBH->do($sql);
 }
