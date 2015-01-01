@@ -10,7 +10,7 @@ import re
 import numpy
 
 
-def team_file():
+def fantasy_teams():
     date = session.query(func.max(FantasyTeam.date)).first()[0]
 
     q = session.query(FantasyTeam)\
@@ -29,15 +29,22 @@ def ratings(teams, start, end):
 
     players = dict([(x.player, len(x.stats())*[0]) for x in skaters])
     for gl in skaters:
-        #players[gl.player] = [sum(x) for x in zip(players[gl.player][:10], gl.stats()[:10])]
         players[gl.player] = map(operator.add, players[gl.player], gl.stats())
 
+    games = session.query(Game).filter(Game.date >= start, Game.date <= end).all()
+    team_games = dict.fromkeys(set([x.home for x in games] + [x.away for x in games]), 0)
+    for game in games:
+        team_games[game.home] += 1
+        team_games[game.away] += 1
 
-    ratings = dict([(x.player.name, len(x.stats())*[0] + [0]) for x in skaters])
+    for player, stats in players.iteritems():
+        players[player] = [float(x)/float(team_games[player.team]) for x in stats]
+
     values  = [x for p, x in players.iteritems() if p.name in teams]
     means   = numpy.mean(values, axis=0)
     stddevs = numpy.std(values, axis=0)
 
+    ratings = dict([(x.player.name, len(x.stats())*[0] + [0]) for x in skaters])
     for i in range(len(values[0])):
         for player, stats in players.iteritems():
             ratings[player.name][i] = (stats[i] - means[i]) / stddevs[i]
@@ -46,14 +53,17 @@ def ratings(teams, start, end):
     return ratings
 
 if __name__ == '__main__':
-    teams    = team_file()
+    teams = fantasy_teams()
 
     numdays = 21
     today = datetime.datetime.now().date()
     rs = [
-        ratings(teams, today - datetime.timedelta(days=3*numdays), today - datetime.timedelta(days=2*numdays+1)),
-        ratings(teams, today - datetime.timedelta(days=2*numdays), today - datetime.timedelta(days=numdays+1)),
-        ratings(teams, today - datetime.timedelta(days=numdays), today),
+        ratings(
+            teams, 
+            today - datetime.timedelta(days=(i+1)*numdays), 
+            today - datetime.timedelta(days=i*numdays+1)
+        )
+        for i in range(3)[::-1]
     ]
     rs = [x for x in rs if x]
 
@@ -65,7 +75,6 @@ if __name__ == '__main__':
         team = teams.get(names[i], 'FA')
         print len(names)-i, team, name, \
             ", ".join([
-                    #"%.3f|%.3f|%.3f" % tuple( [r.get(names[i], 11*[0])[stat] for r in rs] ) 
                     "|".join(["%.3f" % r.get(name, 11*[0])[stat] for r in rs]) 
                     for stat in range(11)
                 ])
