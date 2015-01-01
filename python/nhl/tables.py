@@ -5,13 +5,59 @@ from nhl import Base
 
 import datetime
 
+class EspnCred(Base):
+    __tablename__ = 'espncreds'
+
+    id       = Column(Integer, primary_key=True)
+    username = Column(String)
+    password = Column(String)
+
+    def __init__(self, username, password):
+        self.username = username
+        self.password = password
+
+class Owner(Base):
+    __tablename__ = 'owners'
+
+    id        = Column(Integer, primary_key=True)
+    name      = Column(String)
+    team_name = Column(String)
+
+    def __init__(self, id, name, team_name):
+        self.id        = id
+        self.name      = name
+        self.team_name = team_name
+
+    def __repr__(self):
+       return "<Owner('%d, %s, %s')>" % ((self.id or 0), self.name, self.team_name)
+
+
+class FantasyTeam(Base):
+    __tablename__ = 'fantasyteams'
+
+    id        = Column(Integer, primary_key=True)
+    owner_id  = Column(Integer, ForeignKey('owners.id'))
+    player_id = Column(Integer, ForeignKey('players.id'))
+    date      = Column(Date)
+
+    owner    = relationship("Owner", backref='fantasy_team')
+    player   = relationship("Player", backref='fantasy_team')
+
+    def __init__(self, date, owner, player):
+        self.date      = date
+        self.team_name = name
+        self.player    = player
+
+    def __repr__(self):
+       return "<FantasyTeam('%d, %s, %s')>" % ((self.id or 0), self.owner.team_name, self.player.name)
+
 class Player(Base):
     __tablename__ = 'players'
 
-    id   = Column(Integer, primary_key=True)
-    name = Column(String)
-    pos  = Column(String)
-    team = Column(String)
+    id        = Column(Integer, primary_key=True)
+    name      = Column(String)
+    pos       = Column(String)
+    team      = Column(String)
 
     gamelogs = relationship("GameLog", backref='player')
 
@@ -22,8 +68,7 @@ class Player(Base):
         self.team = team
 
     def __repr__(self):
-       return "<Player('%d, %s, %s, %s')>" % ((self.id or 0), self.name,
-               self.pos, self.team)
+       return "<Player('%d, %s, %s, %s')>" % ((self.id or 0), self.name, self.pos, self.team)
 
 class Game(Base):
     __tablename__ = 'games'
@@ -47,28 +92,27 @@ class GameLog(Base):
     player_id = Column(Integer, ForeignKey('players.id'))
     game_id   = Column(Integer, ForeignKey('games.id'))
 
-    gp        = Column(Integer)
+    gp        = Column(Integer, default=1)
 
-    goals     = Column(Integer)
-    assists   = Column(Integer)
-    ppp       = Column(Integer)
-    plusminus = Column(Integer)
-    pim       = Column(Integer)
-    sog       = Column(Integer)
-    hits      = Column(Integer)
-    blocks    = Column(Integer)
+    goals     = Column(Integer, default=0)
+    assists   = Column(Integer, default=0)
+    ppp       = Column(Integer, default=0)
+    plusminus = Column(Integer, default=0)
+    pim       = Column(Integer, default=0)
+    sog       = Column(Integer, default=0)
+    hits      = Column(Integer, default=0)
+    blocks    = Column(Integer, default=0)
 
-    wins     = Column(Integer)
-    saves    = Column(Integer)
-    ga       = Column(Integer)
-    mins     = Column(Integer)
-    sos      = Column(Integer)
+    wins     = Column(Integer, default=0)
+    saves    = Column(Integer, default=0)
+    ga       = Column(Integer, default=0)
+    mins     = Column(Integer, default=0)
 
     game   = relationship("Game")
 
     def __init__(self, player, game, gp=0, goals=0, assists=0, ppp=0,
             plusminus=0, pim=0, sog=0, hits=0, blocks=0, wins=0, 
-            saves=0, ga=0, mins=0, sos=0):
+            saves=0, ga=0, mins=0):
 
         self.gp        = gp
 
@@ -85,7 +129,6 @@ class GameLog(Base):
         self.saves    = saves
         self.ga       = ga
         self.mins     = mins
-        self.sos      = sos
     
         self.player = player
         self.game   = game
@@ -93,17 +136,26 @@ class GameLog(Base):
     def __repr__(self):
        return "<GameLog('%d, %s')>" % ((self.id or 0), self.stats())
 
-    def stats(self):
-        return [self.goals, self.assists, self.goals + self.assists,
+    def skater_stats(self):
+        return [
+                self.goals, self.assists, self.goals + self.assists,
                 self.plusminus, self.pim, self.ppp, self.sog, self.hits,
                 self.blocks, 
                 (self.goals + self.assists if self.player.pos == 'D' else 0), 
-                self.wins, self.saves, self.sos,
-                self.mins / 60.0 * self.ga, 
+        ]
+
+    def goalie_stats(self):
+        return [
+                self.wins, self.saves, 
+                (1 if self.wins == 1 and self.ga == 0 else 0),
+                3600 / self.mins * self.ga, 
                 (float(self.saves) / float(self.saves + self.ga) 
                     if float(self.saves + self.ga) > 0 else 0
                 ),
         ]
+
+    def stats(self):
+        return self.goalie_stats() if self.player.pos == 'G' else self.skater_stats()
 
 if __name__ == '__main__':
     p = Player(123, 'steven-stamkos', 'RW', 'Boston')
