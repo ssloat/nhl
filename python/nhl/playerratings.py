@@ -69,22 +69,12 @@ if __name__ == '__main__':
 
     names = set(reduce(lambda x, y: x+y.keys(), rs, []))
 
-#    team_stats = dict([(x, 11 * [0]) for x in set(teams.values())])
     names = sorted(names, key=lambda x: sum([r.get(x, [0])[-1] for r in rs]))
     for i, name in enumerate(names):
-        team = teams.get(names[i], 'FA')
+        team = teams.get(name, 'FA')
         print len(names)-i, team, name, \
             ", ".join([
                     "|".join(["%.3f" % r.get(name, 11*[0])[stat] for r in rs]) 
                     for stat in range(11)
                 ])
-
-#        if team == 'FA': continue
-#
-#        for _ in range(11):
-#            team_stats[team][_] += x[_+1]
-#        
-#    for team, stats in team_stats.iteritems():
-#        print team, ["%.3f" % _ for _ in stats]
-
 
