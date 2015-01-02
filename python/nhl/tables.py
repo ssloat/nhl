@@ -4,6 +4,7 @@ from sqlalchemy.orm import relationship, backref
 from nhl import Base
 
 import datetime
+import operator
 
 class EspnCred(Base):
     __tablename__ = 'espncreds'
@@ -53,6 +54,8 @@ class FantasyTeam(Base):
 
 class Player(Base):
     __tablename__ = 'players'
+    GOALIE_NSTATS = 5
+    SKATER_NSTATS = 10
 
     id        = Column(Integer, primary_key=True)
     name      = Column(String)
@@ -69,6 +72,24 @@ class Player(Base):
 
     def __repr__(self):
        return "<Player('%d, %s, %s, %s')>" % ((self.id or 0), self.name, self.pos, self.team)
+
+    def num_stats(self):
+        return Player.GOALIE_NSTATS if self.pos == 'G' else Player.SKATER_NSTATS
+
+    def total_stats(self):
+        return reduce(
+                lambda x, y: map(operator.add, x, y.stats()), 
+                self.gamelogs or [],
+                self.num_stats()*[0]
+            )
+
+    def avg_stats(self, games):
+        return map(operator.div, self.total_stats(), self.num_stats()*[float(games)])
+
+    def ratings(self, games, means, stddevs):
+        ratings = map(lambda x, y, z: (x - y) / z, self.avg_stats(games), means, stddevs)
+        ratings.append(sum(ratings))
+        return ratings
 
 class Game(Base):
     __tablename__ = 'games'
@@ -161,12 +182,15 @@ class GameLog(Base):
 
 if __name__ == '__main__':
     p = Player(123, 'steven-stamkos', 'RW', 'Boston')
-    print p
 
-    g = Game(456, datetime.date(2014, 12, 20), 'Title')
-    print g
+    g1 = Game(456, datetime.date(2014, 12, 20), 'Title', 'Boston', 'Home')
+    g2 = Game(457, datetime.date(2014, 12, 25), 'Title', 'Away', 'Boston')
 
-    l = GameLog(p, g, goals=2, ppp=1)
+    l1 = GameLog(p, g1, goals=2, assists=1, ppp=1, hits=5)
+    l2 = GameLog(p, g2, goals=1, assists=0, ppp=0, hits=9)
 
-    print l
+    print p.gamelogs
+    print p.num_stats()
+    print p.total_stats()
+    print p.avg_stats(2)
 

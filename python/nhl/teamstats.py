@@ -24,6 +24,8 @@ if __name__ == '__main__':
 
         team_stats[team] = map(operator.add, team_stats[team], stats)
         
+    print "%6s" % "", ', '.join(["%9s" % x for x in ['goals', 'assists', 'points', '+/-', 'pim',
+            'ppp', 'sog', 'hits', 'blocks', 'def', 'total']])
     for team, stats in team_stats.iteritems():
         print "%5s" % team, ["%7s" % ("%6.3f" % _) for _ in stats]
 

@@ -1,6 +1,6 @@
 from sqlalchemy import create_engine
 
-from nhl import Base, engine, session
+from nhl import Base, engine, Session
 from nhl.tables import Owner, EspnCred
 
 import sys
@@ -9,6 +9,7 @@ import sys
 if __name__ == '__main__':
     Base.metadata.create_all(engine) 
 
+    session = Session()
     session.add( Owner(1, 'Jenn Ranter', 'JENN') )
     session.add( Owner(2, 'Chris Wilson', 'WILS') )
     session.add( Owner(3, 'John Raines', 'RAIN') )
